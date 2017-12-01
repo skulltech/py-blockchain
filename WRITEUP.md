@@ -71,9 +71,9 @@ So as per our implementation, we'll have to call the `mine()` function of a bloc
 
 ### Now something about Hashing. 
 
-How would I go about hashing the block was a problem I had to face. I had to store the part of the block without the header, and store the hash in the header. This could be done in a few different ways - 
+How would I go about hashing the block was a problem I had to face. I had to get a hash of the part of the block without the header, and store that in the header. This could be done in a few different ways - 
 
-- Making a class which would contain everything except the header of a block, named something like `HeadlessBlock`. And then the `Block` class would contain an instance of `HeadlessBlock` and the hash of that instance.
+- Making a class which would contain a block minus the header, named something like `HeadlessBlock`. And then the `Block` class would contain an instance of `HeadlessBlock`, along with the hash of that instance.
 - Making the hash of the data attributes of `Block` in that class itself.
 
 Now, we could go about hashing in two different ways
@@ -81,11 +81,19 @@ Now, we could go about hashing in two different ways
 - __Using the `hash` function.__
     The [`hash`](https://docs.python.org/3/library/functions.html#hash) function in Python is used for Hash Tables, like in dictionary. As you can see in [it's documentation](https://docs.python.org/3/library/functions.html#hash), it returns an integer 
     from an immutable type. It's not really suitable for general purpose cryptographically-secure hashing.
-- __Using the module `hashlib`.__
-    This is a the library to use for getting secure hash of some data, using different hashing algorithms such as _SHA256_, _MD5_ etc. (MD5 is not really secure though).
+- __Using the module [`hashlib`](https://docs.python.org/3/library/hashlib.html).__
+    This is a the library to use for getting secure hash of some data, using different hashing algorithms such as _SHA256_, _MD5_ etc. (MD5 is not really secure though). The hash funtions in hashlib accept _bytes-like object_ (one supporting the [buffer API](https://docs.python.org/3/c-api/buffer.html)) as input, so we have to get a bytes-like object from the block somehow. We're going to discuss how that can be done in a while.
 
 Now we have to decide which approach are we going to use. It's not much of a dilemma though, the second approach easily wins, because of mainly two reasons - 
-- The `hashlib` library is for usage case such as ours, the `hash` function's usage case is specifically Hash Tables.
-- We will have to broadcast a verified block over the network later, and for that we will have to obtain a byte-like object, or maybe a string from the block object anyway, so going with the second approach will save us some headache in the future too. 
+- The `hashlib` library is built for usage case such as ours, the `hash` function's usage case is specifically Hash Tables.
+- We will have to broadcast a verified block over the network later, and for that we will have to obtain a byte-like object from the block object anyway, so going with the second approach will save us some headache in the future too. 
 
-The hash funtions in hashlib accept _bytes-like object_ (one supporting the [buffer API](https://docs.python.org/3/c-api/buffer.html) as input, so we have to get a bytes-like object from the block somehow.
+So, we decided we're gonna turn the block object into a sequence of bytes, or byte-like-object, but how? Well, it turns out this is a common tasks programmers have to do quite frequently. This process is called serialization, the Python-specific term for which is "Pickling". Here are some definitions of serializations.
+
+From [Wikipedia](https://en.wikipedia.org/wiki/Serialization),  
+
+> In computer science, in the context of data storage, serialization is the process of translating data structures or object state into a format that can be stored (for example, in a file or memory buffer) or transmitted (for example, across a network connection link) and reconstructed later (possibly in a different computer environment).
+
+From the [official documentation of the Pickle module](https://docs.python.org/3/library/pickle.html) of Python,  
+
+> “Pickling” is the process whereby a Python object hierarchy is converted into a byte stream, and “unpickling” is the inverse operation, whereby a byte stream (from a binary file or bytes-like object) is converted back into an object hierarchy.
