@@ -24,15 +24,15 @@ Here is a basic implementation of a block.
 
 ```python
 class Block:
-	def __init__(self, prevhash, records):
-		self.prevhash = prevhash
+	def __init__(self, previous_header, records):
+		self.previous_header = previous_header
 		self.records = records
 ```
 
-As we discussed, the block contains a list of records. But what is prevhash? The genius of blockchain lies in it only, and in the proof-of-work system.
+As we discussed, the block contains a list of records. But what are previous_header and nonce? The genius of blockchain lies in these only, and in the proof-of-work system.
 
 
-### Proof-Of-Work
+### Basics of Proof-Of-Work
 
 Before adding a block to the chain, the block must be verified through a proof-of-work process. This proof-of-work involves finding a nonce for which the hash of the block satisfies a predetermined condition. In the case of Bitcoin, this condition is having a predetermined number of zeroes at the start of the hash bitstring. As the outcome of the hash is unpredectible from the data of the hash, it will take a large number of trials to get a nonce that satisfies the proof-of-work condition.
 
@@ -88,7 +88,7 @@ Now we have to decide which approach are we going to use. It's not much of a dil
 - The `hashlib` library is built for usage case such as ours, the `hash` function's usage case is specifically Hash Tables.
 - We will have to broadcast a verified block over the network later, and for that we will have to obtain a byte-like object from the block object anyway, so going with the second approach will save us some headache in the future too. 
 
-So, we decided we're gonna turn the block object into a sequence of bytes, or byte-like-object, but how? Well, it turns out this is a common tasks programmers have to do quite frequently. This process is called serialization, the Python-specific term for which is "Pickling". Here are some definitions of serializations.
+So, we decided we're gonna turn the block object into a sequence of bytes, or byte-like-object, but how? Well, it turns out this is a common tasks programmers have to do quite frequently. This process is called serialization, the Python-specific term for which is "Pickling". Here are some definitions of serializations which will hopefully make the concept of serilization crystal-clear for you.
 
 From [Wikipedia](https://en.wikipedia.org/wiki/Serialization),  
 
@@ -97,3 +97,79 @@ From [Wikipedia](https://en.wikipedia.org/wiki/Serialization),
 From the [official documentation of the Pickle module](https://docs.python.org/3/library/pickle.html) of Python,  
 
 > “Pickling” is the process whereby a Python object hierarchy is converted into a byte stream, and “unpickling” is the inverse operation, whereby a byte stream (from a binary file or bytes-like object) is converted back into an object hierarchy.
+
+Any object instance can be pickled and vice-versa using the following syntax,
+
+```python
+import pickle
+
+pickl = pickle.dumps(obj)
+obj = pickle.loads(pickl)
+```
+
+Here `pickl` is a `bytes` object, so it can be hashed using the functions from `hashlib`. Below is the code to do that - 
+
+```python
+import hashlib
+
+digest = hashlib.sha256(pickl).hexdigest()
+```
+
+`digest` here is a string representing the hash as a hexstring.
+
+So after implementing our somewhat-acceptable hashing technique to our already existing `Block`, we get the following code.
+
+```python
+import uuid
+import pickle
+import hashlib
+
+
+def mine(headless):
+	pickled = pickle.dumps(headless)
+	
+	header = hashlib.sha256(pickl).hexdigest() 
+	while not valid(header):
+		header = hashlib.sha256(pickl).hexdigest() 	
+	return header
+
+
+class Block:
+	def __init__(self, header, pickled):
+		self.headless = pickled
+		self.header = header
+
+
+class HeadlessBlock:
+	def __init__(self, previous_header, records):
+		self.previous_header = previous_header
+		self.records = records
+		self.nonce = uuid.uuid4()
+
+	def noncise(self):
+		self.nonce = uuid.uuid4()
+```
+
+Here the HeadlessBlock class, as discussed before contains the header (i.e. hash) of the previous block, the records, and a nonce. The nonce gets initialized to a random value when it's created (using the uuid.uuid4() function). The value of the nonce can be changed (set to a random value) as many times as you want later, by calling the noncise function.
+
+The verification of the headless block, or mining, happens in the mine function. Calling this function with a headless block passed to it as an argument will return a verified `Block`, whose header/hash satisfies the proof-of-work condition.
+
+
+### Let the world know we did it!
+
+Sending a verified block over the network (not sending, rather broadcasing, letting the world know!) is another problem we have to solve. for this we have a pretty powerful `sockets` library in Python. Let's dive into it!
+
+Now, to be totally frank, I had little or no idea about sockets programming before this blockchain venture of mine, so I had to learn it from the scratch. So if you're in a similar position, I will let you know how I got my head around the concepts of sockets programming. Check this short article of mine where I discussed that.
+
+
+##### The basic idea
+
+The most brilliant aspect of Blockchain is it's 
+
+
+## The Challenge
+
+After reading the original paper by Satoshi Nakamoto (whoever may him be!), I got fascinated how simple but powerful the idea of Bitcoin/Blockchain is. The only other time I got feeling similar to this is when I watched [this video by Computerphile](https://www.youtube.com/watch?v=MijmeoH9LT4) on Unicode, Character encodings, and UTF-8. Anyway, leaving that aside, being amazed at the brilliant simplicity of the basic concept behind Blockchain, I took up a challenge myself, I would make a blockchain implementation, using just this paper as the blockchain-related resource. The implementation may turn out to be simple, but it has to be complete. And also, I would ofcourse allow myself to look-up about general programming stuffs, just not anything specifically about Blockchain or Bitcoin. 
+
+Below in this write-up, I will document the way I did it. The writeup closely follows my actions and thought process in the order they originally appeared, but of course it doesn't follow it exactly, as that would confuse the hell out of anyone, including myself! This writeup can be interpreted as a tutorial or introduction to blockchain, or maybe a lesson in how a developer thinks when he writes a program, it's upto you!
+

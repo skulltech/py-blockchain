@@ -1,22 +1,31 @@
 import uuid
+import pickle
+import hashlib
 
-		
-def work_valid(header):
-	return (header % 2) != 0
+
+def mine(headless):
+	pickled = pickle.dumps(headless)
+	header = hashlib.sha256(pickl).hexdigest()
+
+	if valid(header):
+		return Block(header, pickled)
 
 
 class Block:
-	def __init__(self, prevhash, records):
-		self.prevhash = prevhash
-		self.records = records
-		self.nonce = None
-		self.header = None
+	def __init__(self, header, pickled):
+		self.headless = pickled
+		self.header = header
 
-	def mine(self):
-		nonce = uuid.uuid4()
-		header = hash((self.prevhash, self.records, nonce))
-		if work_valid(header):
-			self.nonce = nonce
-			self.header = header
-			return True
-		return False
+
+class HeadlessBlock:
+	def __init__(self, previous_header, records):
+		self.previous_header = previous_header
+		self.records = records
+		self.nonce = uuid.uuid4()
+
+	def noncise(self):
+		self.nonce = uuid.uuid4()
+
+
+def valid(header):
+	return (header % 2) != 0
