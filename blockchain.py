@@ -5,10 +5,11 @@ import hashlib
 
 def mine(headless):
 	pickled = pickle.dumps(headless)
-	header = hashlib.sha256(pickl).hexdigest()
-
-	if valid(header):
-		return Block(header, pickled)
+	
+	header = hashlib.sha256(pickl).hexdigest() 
+	while not valid(header):
+		header = hashlib.sha256(pickl).hexdigest() 	
+	return header
 
 
 class Block:

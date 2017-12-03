@@ -1,5 +1,12 @@
 Blockchain is a favorite buzzword among tech news-sites now-a-days. It seems like everybody is trying to use the word just to sound smart, even if they have have no idea how it works. I got interested in it too naturally, especially with the ever-continuous rise of price of Bitcoin and Ethereum, also startups starting to make clever things using Blockchain, it demands some attention from tech guys like me. So I decided to give it a shot.
 
+## The Challenge
+
+After reading the original paper by Satoshi Nakamoto (whoever may him be!), I got fascinated how simple but powerful the idea of Bitcoin/Blockchain is. The only other time I got feeling similar to this is when I watched [this video by Computerphile](https://www.youtube.com/watch?v=MijmeoH9LT4) on Unicode, Character encodings, and UTF-8. Anyway, leaving that aside, being amazed at the brilliant simplicity of the basic concept behind Blockchain, I took up a challenge myself, I would make a blockchain implementation, using just this paper as the blockchain-related resource. The implementation may turn out to be simple, but it has to be complete. And also, I would ofcourse allow myself to look-up about general programming stuffs, just not anything specifically about Blockchain or Bitcoin. 
+
+Below in this write-up, I will document the way I did it. The writeup closely follows my actions and thought process in the order they originally appeared, but of course it doesn't follow it exactly, as that would confuse the hell out of anyone, including myself! This writeup can be interpreted as a tutorial or introduction to blockchain, or maybe a lesson in how a developer thinks when he writes a program, it's upto you!
+
+
 The first thing I did was read the paper on Bitcoin by Satoshi Nakamoto, and that itself made me understand the genius of this technology. In a very simple and clever way, blockchain solves the double-spending problem of Internet currencies, eliminating any need for third-parties like banks or mints. I may be getting ahead now, so without diving headfirst into this, let me first clear up a few things.
 
 
@@ -157,19 +164,96 @@ The verification of the headless block, or mining, happens in the mine function.
 
 ### Let the world know we did it!
 
-Sending a verified block over the network (not sending, rather broadcasing, letting the world know!) is another problem we have to solve. for this we have a pretty powerful `sockets` library in Python. Let's dive into it!
-
-Now, to be totally frank, I had little or no idea about sockets programming before this blockchain venture of mine, so I had to learn it from the scratch. So if you're in a similar position, I will let you know how I got my head around the concepts of sockets programming. Check this short article of mine where I discussed that.
-
-
 ##### The basic idea
 
-The most brilliant aspect of Blockchain is it's 
+The most brilliant aspect of Blockchain is it's decentralized nature. This is achieved by 
 
 
-## The Challenge
+Sending a verified block over the network (not sending, rather broadcasing, letting the world know!) is another problem we have to solve. for this we have a pretty powerful `sockets` library in Python. Let's dive into it!
 
-After reading the original paper by Satoshi Nakamoto (whoever may him be!), I got fascinated how simple but powerful the idea of Bitcoin/Blockchain is. The only other time I got feeling similar to this is when I watched [this video by Computerphile](https://www.youtube.com/watch?v=MijmeoH9LT4) on Unicode, Character encodings, and UTF-8. Anyway, leaving that aside, being amazed at the brilliant simplicity of the basic concept behind Blockchain, I took up a challenge myself, I would make a blockchain implementation, using just this paper as the blockchain-related resource. The implementation may turn out to be simple, but it has to be complete. And also, I would ofcourse allow myself to look-up about general programming stuffs, just not anything specifically about Blockchain or Bitcoin. 
+Now, to be totally frank, I had little or no idea about sockets programming before this blockchain venture of mine, so I had to learn it from the scratch. So if you're in a similar position, I will let you know how I got my head around the concepts of sockets programming. Check this [short article of mine]() where I discussed that. The gist is, I made a small [CLI file transfer program](https://github.com/SkullTech/PearSend) to learn the basics, learn-by-doing is the best way to go, always.
 
-Below in this write-up, I will document the way I did it. The writeup closely follows my actions and thought process in the order they originally appeared, but of course it doesn't follow it exactly, as that would confuse the hell out of anyone, including myself! This writeup can be interpreted as a tutorial or introduction to blockchain, or maybe a lesson in how a developer thinks when he writes a program, it's upto you!
+After [getting the basics down](), here is the code I wrote for the networking part of the blockchain -
+
+__broadcast.py__
+```python3
+import socket
+import zlib
+
+
+def getdata(message):
+	length = len(message)
+
+	if len(str(length)) > 16:
+		raise Exception('The message is too long! Exiting')
+
+	data = '{:>16}'.format(str(length)).encode('UTF-8') + '{:>10}'.format(str(zlib.crc32(message))).encode('UTF-8') + message
+	return data
+
+
+def broadcast(host, port=5000, message):
+	data = getdata(message)
+	length = len(data)
+
+	sckt = socket.socket(AF_INET, SOCK_DGRAM)
+	sckt.bind(('', 0))
+	sckt.setsockopt(SOL_SOCKET, SO_BROADCAST, 1)
+
+
+	totalsent = 0
+	while totalsent < length:
+		sent = sckt.sendto(data[totalsent:], ('<broadcast>', port))
+		if not sent:
+			raise RuntimeError('Socket connection broken!')
+		totalsent = totalsent + sent
+```
+
+__receiver.py__
+```python
+import socket
+import zlib
+
+
+def get_ip():
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    try:
+        s.connect(('10.255.255.255', 1))
+        IP = s.getsockname()[0]
+    except:
+        IP = '127.0.0.1'
+    finally:
+        s.close()
+    return IP
+
+
+def receive(host=get_ip(), port):
+	print('[*] Listening for connections on: {host}:{port}'.format(host=host, port=port))
+	
+	conn = socket.socket(AF_INET, SOCK_DGRAM)
+	conn.bind((host, port))
+
+	data, addr = conn.recvfrom(16)
+	print('[*] Connection from : {addr[0]}:{addr[1]}'.format(addr=addr))
+
+	chunks = []
+	bytes_received = 0
+	length = int(data.decode('UTF-8'))
+
+	checksum = int(conn.recv(10).decode('UTF-8'))
+	
+	while bytes_received < length:
+		chunk = conn.recv(min(length-bytes_received, 1024))
+		if not chunk:
+			raise RuntimeError('Socket connection broken!')
+		chunks.append(chunk)
+		bytes_received = bytes_received + len(chunk)
+
+	data = b''.join(chunks)
+	if (zlib.crc32(data) != checksum):
+		raise RuntimeError("Checksums don't match!")
+	return data
+```
+
+A detailed explanation of this code would be out-of-context for this post, as I'm trying to focus on the blockchain specific parts of it. If you are interested in a detailed explanation of this `receiver.py` and `broadcast.py`, check out [this article]() of mine.
+
 

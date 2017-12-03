@@ -1,4 +1,5 @@
 import socket
+import zlib
 
 
 def get_ip():
@@ -17,7 +18,7 @@ def receive(host=get_ip(), port):
 	print('[*] Listening for connections on: {host}:{port}'.format(host=host, port=port))
 	
 	conn = socket.socket(AF_INET, SOCK_DGRAM)
-	sckt.bind((host, port))
+	conn.bind((host, port))
 
 	data, addr = conn.recvfrom(16)
 	print('[*] Connection from : {addr[0]}:{addr[1]}'.format(addr=addr))
